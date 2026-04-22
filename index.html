@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Molecular Modeler</title>
+    <style>
+        :root {
+            --bg-dark: #020617;
+            --bg-gradient: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.65);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #0ea5e9;
+            --accent-glow: rgba(14, 165, 233, 0.4);
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: radial-gradient(circle at 50% 0%, var(--bg-gradient), var(--bg-dark) 80%);
+            color: var(--text-main);
+            margin: 0;
+            padding: 2rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 { 
+            color: var(--text-main); 
+            margin: 0 0 0.5rem 0; 
+            font-weight: 800; 
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            font-size: 1.8rem;
+        }
+        
+        h1 span { color: var(--accent); }
+        
+        p.subtitle { 
+            color: var(--text-muted); 
+            margin: 0; 
+            font-size: 1rem; 
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .glass-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            background-color: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-glass);
+            color: white;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        input:focus { 
+            outline: none; 
+            border-color: var(--accent); 
+            box-shadow: 0 0 15px var(--accent-glow), inset 0 2px 4px rgba(0,0,0,0.2); 
+        }
+        input::placeholder { color: #475569; }
+
+        button {
+            padding: 0 2.5rem;
+            background: linear-gradient(135deg, #0284c7, #0ea5e9);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        button:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 6px 20px var(--accent-glow);
+            background: linear-gradient(135deg, #0369a1, #0284c7);
+        }
+
+        #message {
+            margin: 0; padding: 1rem; border-radius: 10px; display: none; font-weight: 600; text-align: center;
+            font-size: 0.95rem; letter-spacing: 0.5px;
+        }
+        .error { background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
+        .success { background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #6ee7b7; }
+
+        .viewer-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .canvas-wrapper {
+            background-color: #ffffff;
+            /* Blueprint Grid Effect */
+            background-image: 
+                radial-gradient(#cbd5e1 1px, transparent 1px),
+                radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px;
+            background-position: 0 0, 10px 10px;
+            border-radius: 12px;
+            padding: 0;
+            overflow: hidden;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
+            position: relative;
+            height: 500px;
+            border: 4px solid #f1f5f9;
+        }
+
+        canvas { 
+            width: 100%; 
+            height: 100%; 
+            cursor: crosshair; 
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-card {
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .element-footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 1rem;
+            line-height: 1.6;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Molecule<span>Modeler</span></h1>
+        <p class="subtitle">Algorithmic VSEPR & Lewis Dot Engine</p>
+    </header>
+
+    <div class="app-container">
+        
+        <div class="glass-panel">
+            <div class="controls">
+                <input type="text" id="formulaInput" placeholder="Enter formula (e.g., C6H12O6, H2SO4, XeF4)" autocomplete="off">
+                <button onclick="generate()">Model</button>
+            </div>
+        </div>
+
+        <div id="message"></div>
+
+        <div class="viewer-section">
+            <div class="canvas-wrapper">
+                <canvas id="lewisCanvas" width="900" height="500"></canvas>
+            </div>
+            
+            <div class="glass-panel stats-grid" id="statsPanel">
+                <div class="stat-card">
+                    <div class="stat-value" id="statFormula">-</div>
+                    <div class="stat-label">Formula</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statAtoms">0</div>
+                    <div class="stat-label">Total Atoms</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statElectrons">0</div>
+                    <div class="stat-label">Valence Electrons</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="element-footer">
+            Expanded CPK Element Library: H, Li, Be, B, C, N, O, F, Na, Mg, Al, Si, P, S, Cl, Ar, K, Ca, As, Se, Br, Kr, I, Xe.
+        </div>
+    </div>
+
+    <script>
+        const elementData = {
+            'H':  { v: 1, maxB: 1, en: 2.20, color: '#ffffff', textColor: '#000000', radius: 15 },
+            'Li': { v: 1, maxB: 1, en: 0.98, color: '#cc80ff', textColor: '#ffffff', radius: 22 },
+            'Be': { v: 2, maxB: 2, en: 1.57, color: '#c2ff00', textColor: '#000000', radius: 20 },
+            'B':  { v: 3, maxB: 3, en: 2.04, color: '#ffb5b5', textColor: '#000000', radius: 20 },
+            'C':  { v: 4, maxB: 4, en: 2.55, color: '#333333', textColor: '#ffffff', radius: 22 },
+            'N':  { v: 5, maxB: 4, en: 3.04, color: '#3050f8', textColor: '#ffffff', radius: 21 },
+            'O':  { v: 6, maxB: 3, en: 3.44, color: '#ff0d0d', textColor: '#ffffff', radius: 20 },
+            'F':  { v: 7, maxB: 1, en: 3.98, color: '#90e050', textColor: '#000000', radius: 18 },
+            'Na': { v: 1, maxB: 1, en: 0.93, color: '#ab5cf2', textColor: '#ffffff', radius: 24 },
+            'Mg': { v: 2, maxB: 2, en: 1.31, color: '#8aff00', textColor: '#000000', radius: 22 },
+            'Al': { v: 3, maxB: 3, en: 1.61, color: '#bfa6a6', textColor: '#000000', radius: 22 },
+            'Si': { v: 4, maxB: 4, en: 1.90, color: '#f0c8a0', textColor: '#000000', radius: 23 },
+            'P':  { v: 5, maxB: 5, en: 2.19, color: '#ff8000', textColor: '#ffffff', radius: 23 },
+            'S':  { v: 6, maxB: 6, en: 2.58, color: '#ffff30', textColor: '#000000', radius: 23 },
+            'Cl': { v: 7, maxB: 1, en: 3.16, color: '#1ff01f', textColor: '#000000', radius: 22 },
+            'Ar': { v: 8, maxB: 0, en: 3.20, color: '#80d1e3', textColor: '#000000', radius: 24 },
+            'K':  { v: 1, maxB: 1, en: 0.82, color: '#8f40d4', textColor: '#ffffff', radius: 26 },
+            'Ca': { v: 2, maxB: 2, en: 1.00, color: '#3dff00', textColor: '#000000', radius: 24 },
+            'As': { v: 5, maxB: 5, en: 2.18, color: '#bd80e3', textColor: '#ffffff', radius: 24 },
+            'Se': { v: 6, maxB: 6, en: 2.55, color: '#ffa100', textColor: '#ffffff', radius: 24 },
+            'Br': { v: 7, maxB: 1, en: 2.96, color: '#a62929', textColor: '#ffffff', radius: 24 },
+            'Kr': { v: 8, maxB: 2, en: 3.00, color: '#5cb8d1', textColor: '#000000', radius: 25 },
+            'I':  { v: 7, maxB: 1, en: 2.66, color: '#940094', textColor: '#ffffff', radius: 26 },
+            'Xe': { v: 8, maxB: 4, en: 2.60, color: '#429eb0', textColor: '#ffffff', radius: 27 }
+        };
+
+        const canvas = document.getElementById('lewisCanvas');
+        const ctx = canvas.getContext('2d');
+        const msgDiv = document.getElementById('message');
+        let currentGraph = null;
+
+        function showMessage(text, isError) {
+            msgDiv.textContent = text;
+            msgDiv.className = isError ? 'error' : 'success';
+            msgDiv.style.display = 'block';
+        }
+
+        function updateStats(formula, atomsList) {
+            document.getElementById('statFormula').textContent = formula;
+            document.getElementById('statAtoms').textContent = atomsList.length;
+            document.getElementById('statElectrons').textContent = atomsList.reduce((sum, a) => sum + a.v, 0);
+        }
+
+        // Parse Formula
+        function parseFormula(formula) {
+            const regex = /([A-Z][a-z]*)(\d*)/g;
+            let match;
+            let atoms = [];
+            while ((match = regex.exec(formula)) !== null) {
+                let symbol = match[1];
+                let count = match[2] === "" ? 1 : parseInt(match[2]);
+                if (!elementData[symbol]) throw new Error(`Unknown element: ${symbol}`);
+                for (let i = 0; i < count; i++) {
+                    atoms.push({ 
+                        id: Math.random().toString(36).substr(2, 9), 
+                        symbol: symbol, 
+                        ...elementData[symbol], 
+                        bonds: [], 
+                        lonePairs: 0 
+                    });
+                }
+            }
+            if (atoms.length < 2) throw new Error("Enter a compound with at least 2 atoms.");
+            return atoms;
+        }
+
+        // Build Graph & Electrons
+        function buildMoleculeGraph(atoms) {
+            atoms.sort((a, b) => {
+                if (b.maxB !== a.maxB) return b.maxB - a.maxB;
+                return a.en - b.en;
+            });
+
+            let tve = atoms.reduce((sum, a) => sum + a.v, 0);
+            let connected = [atoms[0]];
+            let unconnected = atoms.slice(1);
+            let edges = [];
+
+            while (unconnected.length > 0) {
+                let target = unconnected.shift();
+                let parent = connected.find(n => n.bonds.length < n.maxB);
+                if (!parent) throw new Error("Cannot connect all atoms based on standard valencies.");
+                
+                let edge = { source: parent, target: target, order: 1 };
+                edges.push(edge);
+                parent.bonds.push(edge);
+                target.bonds.push(edge);
+                connected.push(target);
+                tve -= 2;
+            }
+
+            let terminals = atoms.filter(a => a.bonds.length === 1 && !['H','Li','Na','K'].includes(a.symbol));
+            let centers = atoms.filter(a => a.bonds.length > 1 && a.symbol !== 'H');
+
+            terminals.forEach(t => {
+                let given = Math.min(tve, 6);
+                t.lonePairs += given;
+                tve -= given;
+            });
+
+            centers.forEach(c => { c.lonePairs += tve; tve = 0; });
+
+            let stable = false, iters = 0;
+            while (!stable && iters < 10) {
+                stable = true;
+                centers.forEach(c => {
+                    let electrons = c.lonePairs + (c.bonds.reduce((s, b) => s + b.order, 0) * 2);
+                    if (electrons < 8 && c.symbol !== 'B' && c.symbol !== 'Be') {
+                        let edge = c.bonds.find(b => {
+                            let neighbor = b.source === c ? b.target : b.source;
+                            return neighbor.lonePairs >= 2 && b.order < 3;
+                        });
+                        if (edge) {
+                            let neighbor = edge.source === c ? edge.target : edge.source;
+                            edge.order++;
+                            neighbor.lonePairs -= 2;
+                            stable = false;
+                        }
+                    }
+                });
+                iters++;
+            }
+            return { nodes: atoms, edges: edges };
+        }
+
+        let animFrame;
+        
+        function renderMolecule(graph) {
+            cancelAnimationFrame(animFrame);
+            
+            graph.nodes.forEach(n => {
+                n.x = canvas.width/2 + (Math.random() - 0.5) * 100;
+                n.y = canvas.height/2 + (Math.random() - 0.5) * 100;
+                n.vx = 0; n.vy = 0;
+            });
+
+            const kSpring = 0.08;
+            const idealLen = 110;
+            const damping = 0.82;
+            const repulsion = 6000;
+            const angularRepulsion = 8000;
+
+            function simulate() {
+                for(let i=0; i<graph.nodes.length; i++) {
+                    for(let j=i+1; j<graph.nodes.length; j++) {
+                        let dx = graph.nodes[i].x - graph.nodes[j].x;
+                        let dy = graph.nodes[i].y - graph.nodes[j].y;
+                        let dist2 = dx*dx + dy*dy || 1;
+                        let dist = Math.sqrt(dist2);
+                        let force = repulsion / dist2;
+                        graph.nodes[i].vx += (dx/dist) * force;
+                        graph.nodes[i].vy += (dy/dist) * force;
+                        graph.nodes[j].vx -= (dx/dist) * force;
+                        graph.nodes[j].vy -= (dy/dist) * force;
+                    }
+                }
+
+                graph.nodes.forEach(center => {
+                    if (center.bonds.length > 1) {
+                        let neighbors = center.bonds.map(b => b.source === center ? b.target : b.source);
+                        for(let i=0; i<neighbors.length; i++) {
+                            for(let j=i+1; j<neighbors.length; j++) {
+                                let dx = neighbors[i].x - neighbors[j].x;
+                                let dy = neighbors[i].y - neighbors[j].y;
+                                let dist2 = dx*dx + dy*dy || 1;
+                                let dist = Math.sqrt(dist2);
+                                let force = angularRepulsion / dist2;
+                                neighbors[i].vx += (dx/dist) * force;
+                                neighbors[i].vy += (dy/dist) * force;
+                                neighbors[j].vx -= (dx/dist) * force;
+                                neighbors[j].vy -= (dy/dist) * force;
+                            }
+                        }
+                    }
+                });
+
+                graph.edges.forEach(e => {
+                    let dx = e.target.x - e.source.x;
+                    let dy = e.target.y - e.source.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy) || 1;
+                    let force = (dist - idealLen) * kSpring;
+                    e.source.vx += (dx/dist) * force;
+                    e.source.vy += (dy/dist) * force;
+                    e.target.vx -= (dx/dist) * force;
+                    e.target.vy -= (dy/dist) * force;
+                });
+
+                let cx = 0, cy = 0;
+                graph.nodes.forEach(n => {
+                    n.x += n.vx; n.y += n.vy;
+                    n.vx *= damping; n.vy *= damping;
+                    cx += n.x; cy += n.y;
+                });
+
+                cx /= graph.nodes.length;
+                cy /= graph.nodes.length;
+                let offsetX = (canvas.width/2 - cx) * 0.05;
+                let offsetY = (canvas.height/2 - cy) * 0.05;
+                graph.nodes.forEach(n => { n.x += offsetX; n.y += offsetY; });
+
+                drawGraph(graph);
+                animFrame = requestAnimationFrame(simulate);
+            }
+            
+            simulate();
+            setTimeout(() => cancelAnimationFrame(animFrame), 3500);
+        }
+
+        function drawGraph(graph) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            graph.edges.forEach(e => {
+                ctx.strokeStyle = "#64748b"; 
+                ctx.lineWidth = 4;
+                ctx.lineCap = "round";
+                
+                let dx = e.target.x - e.source.x;
+                let dy = e.target.y - e.source.y;
+                let len = Math.sqrt(dx*dx + dy*dy);
+                let nx = -dy / len;
+                let ny = dx / len;
+                let space = 9; 
+
+                ctx.beginPath();
+                if(e.order === 1) {
+                    ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
+                } else if(e.order === 2) {
+                    ctx.moveTo(e.source.x + nx*space/2, e.source.y + ny*space/2); 
+                    ctx.lineTo(e.target.x + nx*space/2, e.target.y + ny*space/2);
+                    ctx.moveTo(e.source.x - nx*space/2, e.source.y - ny*space/2); 
+                    ctx.lineTo(e.target.x - nx*space/2, e.target.y - ny*space/2);
+                } else if(e.order === 3) {
+                    ctx.moveTo(e.source.x, e.source.y); ctx.lineTo(e.target.x, e.target.y);
+                    ctx.moveTo(e.source.x + nx*space, e.source.y + ny*space); 
+                    ctx.lineTo(e.target.x + nx*space, e.target.y + ny*space);
+                    ctx.moveTo(e.source.x - nx*space, e.source.y - ny*space); 
+                    ctx.lineTo(e.target.x - nx*space, e.target.y - ny*space);
+                }
+                ctx.stroke();
+            });
+
+            ctx.font = "bold 18px 'Inter', sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            graph.nodes.forEach(n => {
+                let grad = ctx.createRadialGradient(n.x - n.radius/3, n.y - n.radius/3, n.radius/5, n.x, n.y, n.radius);
+                grad.addColorStop(0, '#ffffff'); 
+                grad.addColorStop(0.3, n.color);
+                grad.addColorStop(1, shadeColor(n.color, -40)); 
+
+                ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetY = 3;
+                
+                ctx.beginPath();
+                ctx.arc(n.x, n.y, n.radius, 0, Math.PI*2);
+                ctx.fillStyle = grad;
+                ctx.fill();
+
+                ctx.shadowBlur = 0;
+                ctx.shadowOffsetY = 0;
+                ctx.fillStyle = n.textColor;
+                ctx.fillText(n.symbol, n.x, n.y + 1);
+
+                ctx.fillStyle = "#ef4444";
+                ctx.shadowColor = '#ef4444';
+                ctx.shadowBlur = 5;
+                let pairs = Math.floor(n.lonePairs / 2);
+                let angles = [0, Math.PI/2, Math.PI, 3*Math.PI/2];
+                let lpRad = n.radius + 6;
+
+                for(let i=0; i<pairs; i++) {
+                    let a = angles[i];
+                    ctx.beginPath(); ctx.arc(n.x + Math.cos(a-0.15)*lpRad, n.y + Math.sin(a-0.15)*lpRad, 2.5, 0, Math.PI*2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(n.x + Math.cos(a+0.15)*lpRad, n.y + Math.sin(a+0.15)*lpRad, 2.5, 0, Math.PI*2); ctx.fill();
+                }
+                ctx.shadowBlur = 0; 
+            });
+        }
+
+        function shadeColor(color, percent) {
+            let R = parseInt(color.substring(1,3),16);
+            let G = parseInt(color.substring(3,5),16);
+            let B = parseInt(color.substring(5,7),16);
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+            R = (R<255)?R:255;  G = (G<255)?G:255;  B = (B<255)?B:255;
+            R = (R>0)?R:0;      G = (G>0)?G:0;      B = (B>0)?B:0;
+            let RR = ((R.toString(16).length==1)?"0"+R.toString(16):R.toString(16));
+            let GG = ((G.toString(16).length==1)?"0"+G.toString(16):G.toString(16));
+            let BB = ((B.toString(16).length==1)?"0"+B.toString(16):B.toString(16));
+            return "#"+RR+GG+BB;
+        }
+
+        function generate() {
+            msgDiv.style.display = 'none';
+            try {
+                let input = document.getElementById('formulaInput').value.trim();
+                if(!input) throw new Error("Please enter a formula.");
+                let atoms = parseFormula(input);
+                currentGraph = buildMoleculeGraph(atoms);
+                updateStats(input, atoms);
+                renderMolecule(currentGraph);
+            } catch(e) {
+                showMessage(e.message, true);
+                updateStats("-", []);
+            }
+        }
+        
+        window.onload = () => {
+            document.getElementById('formulaInput').value = "C6H6";
+            generate();
+        };
+    </script>
+</body>
+</html>
