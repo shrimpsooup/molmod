@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Molecular Modeler</title>
+    <title>Pro Molecular Modeler - Interactive & Zoom</title>
     <style>
         :root {
             --bg-dark: #020617;
@@ -14,8 +14,6 @@
             --text-muted: #94a3b8;
             --accent: #0ea5e9;
             --accent-glow: rgba(14, 165, 233, 0.4);
-            --danger: #ef4444;
-            --success: #10b981;
         }
 
         * { box-sizing: border-box; }
@@ -32,175 +30,72 @@
             min-height: 100vh;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        h1 { 
-            color: var(--text-main); 
-            margin: 0 0 0.5rem 0; 
-            font-weight: 800; 
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            font-size: 1.8rem;
-        }
-        
+        header { text-align: center; margin-bottom: 2rem; }
+        h1 { margin: 0 0 0.5rem 0; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; font-size: 1.8rem; }
         h1 span { color: var(--accent); }
-        
-        p.subtitle { 
-            color: var(--text-muted); 
-            margin: 0; 
-            font-size: 1rem; 
-        }
+        p.subtitle { color: var(--text-muted); margin: 0; font-size: 1rem; }
 
-        .app-container {
-            width: 100%;
-            max-width: 900px;
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-        }
+        .app-container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 1.5rem; }
 
         .glass-panel {
             background: var(--panel-bg);
             backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
             border: 1px solid var(--border-glass);
             border-radius: 16px;
             padding: 1.5rem;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .controls {
-            display: flex;
-            gap: 12px;
-        }
-
+        .controls { display: flex; gap: 12px; }
         input {
-            flex: 1;
-            padding: 1rem 1.5rem;
-            background-color: rgba(15, 23, 42, 0.8);
-            border: 1px solid var(--border-glass);
-            color: white;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+            flex: 1; padding: 1rem 1.5rem; background-color: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-glass); color: white; border-radius: 10px;
+            font-size: 1.1rem; transition: all 0.3s ease;
         }
-
-        input:focus { 
-            outline: none; 
-            border-color: var(--accent); 
-            box-shadow: 0 0 15px var(--accent-glow), inset 0 2px 4px rgba(0,0,0,0.2); 
-        }
+        input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 15px var(--accent-glow); }
         input::placeholder { color: #475569; }
 
         button {
-            padding: 0 2.5rem;
-            background: linear-gradient(135deg, #0284c7, #0ea5e9);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 15px var(--accent-glow);
+            padding: 0 2.5rem; background: linear-gradient(135deg, #0284c7, #0ea5e9);
+            color: white; border: none; border-radius: 10px; font-size: 1.1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 15px var(--accent-glow);
         }
+        button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px var(--accent-glow); }
 
-        button:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 20px var(--accent-glow);
-            background: linear-gradient(135deg, #0369a1, #0284c7);
-        }
-
-        #message {
-            margin: 0; padding: 1rem; border-radius: 10px; display: none; font-weight: 600; text-align: center;
-            font-size: 0.95rem; letter-spacing: 0.5px;
-        }
+        #message { margin: 0; padding: 1rem; border-radius: 10px; display: none; font-weight: 600; text-align: center; }
         .error { background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
         .success { background-color: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #6ee7b7; }
 
-        .viewer-section {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
+        .viewer-section { display: flex; flex-direction: column; gap: 1rem; }
         .canvas-wrapper {
             background-color: #ffffff;
-            /* Blueprint Grid Effect */
-            background-image: 
-                radial-gradient(#cbd5e1 1px, transparent 1px),
-                radial-gradient(#cbd5e1 1px, transparent 1px);
-            background-size: 20px 20px;
-            background-position: 0 0, 10px 10px;
-            border-radius: 12px;
-            padding: 0;
-            overflow: hidden;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
-            position: relative;
-            height: 500px;
-            border: 4px solid #f1f5f9;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px), radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 20px 20px; background-position: 0 0, 10px 10px;
+            border-radius: 12px; overflow: hidden; box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
+            position: relative; height: 500px; border: 4px solid #f1f5f9;
         }
+        canvas { width: 100%; height: 100%; cursor: grab; }
+        canvas:active { cursor: grabbing; }
 
-        canvas { 
-            width: 100%; 
-            height: 100%; 
-            cursor: crosshair; 
-        }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .stat-card { background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem; text-align: center; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin-bottom: 0.25rem; }
+        .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
 
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 1rem;
-        }
-
-        .stat-card {
-            background: rgba(15, 23, 42, 0.5);
-            border: 1px solid var(--border-glass);
-            border-radius: 10px;
-            padding: 1rem;
-            text-align: center;
-        }
-
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--accent);
-            margin-bottom: 0.25rem;
-        }
-
-        .stat-label {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .element-footer {
-            text-align: center;
-            font-size: 0.8rem;
-            color: #64748b;
-            margin-top: 1rem;
-            line-height: 1.6;
-        }
-
+        .element-footer { text-align: center; font-size: 0.8rem; color: #64748b; margin-top: 1rem; line-height: 1.6; }
     </style>
 </head>
 <body>
 
     <header>
         <h1>Molecule<span>Modeler</span></h1>
-        <p class="subtitle">Algorithmic VSEPR & Lewis Dot Engine</p>
+        <p class="subtitle">Interactive Physics, Parsing, & Zoom Control</p>
     </header>
 
     <div class="app-container">
-        
         <div class="glass-panel">
             <div class="controls">
-                <input type="text" id="formulaInput" placeholder="Enter formula (e.g., C6H12O6, H2SO4, XeF4)" autocomplete="off">
+                <input type="text" id="formulaInput" placeholder="Try C8H10N4O2 (Caffeine)" autocomplete="off">
                 <button onclick="generate()">Model</button>
             </div>
         </div>
@@ -229,7 +124,8 @@
         </div>
 
         <div class="element-footer">
-            Expanded CPK Element Library: H, Li, Be, B, C, N, O, F, Na, Mg, Al, Si, P, S, Cl, Ar, K, Ca, As, Se, Br, Kr, I, Xe.
+            Scroll to zoom • Click and drag to move atoms<br>
+            Library: H, Li, Be, B, C, N, O, F, Na, Mg, Al, Si, P, S, Cl, Ar, K, Ca, As, Se, Br, Kr, I, Xe, Fe
         </div>
     </div>
 
@@ -253,6 +149,7 @@
             'Ar': { v: 8, maxB: 0, en: 3.20, color: '#80d1e3', textColor: '#000000', radius: 24 },
             'K':  { v: 1, maxB: 1, en: 0.82, color: '#8f40d4', textColor: '#ffffff', radius: 26 },
             'Ca': { v: 2, maxB: 2, en: 1.00, color: '#3dff00', textColor: '#000000', radius: 24 },
+            'Fe': { v: 2, maxB: 6, en: 1.83, color: '#e06633', textColor: '#ffffff', radius: 24 },
             'As': { v: 5, maxB: 5, en: 2.18, color: '#bd80e3', textColor: '#ffffff', radius: 24 },
             'Se': { v: 6, maxB: 6, en: 2.55, color: '#ffa100', textColor: '#ffffff', radius: 24 },
             'Br': { v: 7, maxB: 1, en: 2.96, color: '#a62929', textColor: '#ffffff', radius: 24 },
@@ -264,7 +161,64 @@
         const canvas = document.getElementById('lewisCanvas');
         const ctx = canvas.getContext('2d');
         const msgDiv = document.getElementById('message');
+        
         let currentGraph = null;
+        let animFrame = null;
+        let draggedNode = null;
+        
+        // --- ZOOM CONTROL ---
+        let zoomLevel = 1.0;
+        
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault(); // Stop page from scrolling down
+            const zoomFactor = 0.08;
+            if (e.deltaY < 0) {
+                zoomLevel += zoomFactor; // Scroll up = zoom in
+            } else {
+                zoomLevel -= zoomFactor; // Scroll down = zoom out
+            }
+            // Clamp the zoom so users can't break the canvas
+            zoomLevel = Math.max(0.2, Math.min(zoomLevel, 4.0));
+        }, { passive: false });
+
+        // --- MOUSE INTERACTIVITY & INVERSE SCALING ---
+        canvas.addEventListener('mousedown', (e) => {
+            if (!currentGraph) return;
+            const rect = canvas.getBoundingClientRect();
+            const rawX = e.clientX - rect.left;
+            const rawY = e.clientY - rect.top;
+            
+            // Map screen coordinates back to the simulated world coordinates
+            const mx = (rawX - canvas.width/2) / zoomLevel + canvas.width/2;
+            const my = (rawY - canvas.height/2) / zoomLevel + canvas.height/2;
+            
+            for (let i = currentGraph.nodes.length - 1; i >= 0; i--) {
+                let n = currentGraph.nodes[i];
+                let dx = mx - n.x;
+                let dy = my - n.y;
+                if (dx*dx + dy*dy <= n.radius*n.radius) {
+                    draggedNode = n;
+                    break;
+                }
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (draggedNode) {
+                const rect = canvas.getBoundingClientRect();
+                const rawX = e.clientX - rect.left;
+                const rawY = e.clientY - rect.top;
+                
+                // Keep the dragged node exactly under the mouse, accounting for scale
+                draggedNode.x = (rawX - canvas.width/2) / zoomLevel + canvas.width/2;
+                draggedNode.y = (rawY - canvas.height/2) / zoomLevel + canvas.height/2;
+                draggedNode.vx = 0; 
+                draggedNode.vy = 0;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => { draggedNode = null; });
+        canvas.addEventListener('mouseleave', () => { draggedNode = null; });
 
         function showMessage(text, isError) {
             msgDiv.textContent = text;
@@ -278,8 +232,23 @@
             document.getElementById('statElectrons').textContent = atomsList.reduce((sum, a) => sum + a.v, 0);
         }
 
-        // Parse Formula
-        function parseFormula(formula) {
+        // --- PARSER UPGRADE: Handle Parentheses ---
+        function expandFormula(formula) {
+            let regex = /\(([^()]+)\)(\d*)/;
+            let match;
+            while ((match = regex.exec(formula)) !== null) {
+                let inner = match[1];
+                let mult = match[2] ? parseInt(match[2]) : 1;
+                let expanded = inner.replace(/([A-Z][a-z]*)(\d*)/g, (m, sym, num) => {
+                    return sym + ((num ? parseInt(num) : 1) * mult);
+                });
+                formula = formula.replace(match[0], expanded);
+            }
+            return formula;
+        }
+
+        function parseFormula(rawFormula) {
+            let formula = expandFormula(rawFormula);
             const regex = /([A-Z][a-z]*)(\d*)/g;
             let match;
             let atoms = [];
@@ -301,7 +270,6 @@
             return atoms;
         }
 
-        // Build Graph & Electrons
         function buildMoleculeGraph(atoms) {
             atoms.sort((a, b) => {
                 if (b.maxB !== a.maxB) return b.maxB - a.maxB;
@@ -360,10 +328,8 @@
             return { nodes: atoms, edges: edges };
         }
 
-        let animFrame;
-        
         function renderMolecule(graph) {
-            cancelAnimationFrame(animFrame);
+            if(animFrame) cancelAnimationFrame(animFrame);
             
             graph.nodes.forEach(n => {
                 n.x = canvas.width/2 + (Math.random() - 0.5) * 100;
@@ -424,27 +390,38 @@
 
                 let cx = 0, cy = 0;
                 graph.nodes.forEach(n => {
-                    n.x += n.vx; n.y += n.vy;
-                    n.vx *= damping; n.vy *= damping;
+                    if (n !== draggedNode) {
+                        n.x += n.vx; 
+                        n.y += n.vy;
+                    }
+                    n.vx *= damping; 
+                    n.vy *= damping;
                     cx += n.x; cy += n.y;
                 });
 
-                cx /= graph.nodes.length;
-                cy /= graph.nodes.length;
-                let offsetX = (canvas.width/2 - cx) * 0.05;
-                let offsetY = (canvas.height/2 - cy) * 0.05;
-                graph.nodes.forEach(n => { n.x += offsetX; n.y += offsetY; });
+                if (!draggedNode) {
+                    cx /= graph.nodes.length;
+                    cy /= graph.nodes.length;
+                    let offsetX = (canvas.width/2 - cx) * 0.05;
+                    let offsetY = (canvas.height/2 - cy) * 0.05;
+                    graph.nodes.forEach(n => { n.x += offsetX; n.y += offsetY; });
+                }
 
                 drawGraph(graph);
                 animFrame = requestAnimationFrame(simulate);
             }
             
             simulate();
-            setTimeout(() => cancelAnimationFrame(animFrame), 3500);
         }
 
         function drawGraph(graph) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Save state, apply matrix transform for zoom, then draw
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+            ctx.scale(zoomLevel, zoomLevel);
+            ctx.translate(-canvas.width/2, -canvas.height/2);
             
             graph.edges.forEach(e => {
                 ctx.strokeStyle = "#64748b"; 
@@ -486,9 +463,15 @@
                 grad.addColorStop(0.3, n.color);
                 grad.addColorStop(1, shadeColor(n.color, -40)); 
 
-                ctx.shadowColor = 'rgba(0,0,0,0.3)';
-                ctx.shadowBlur = 6;
-                ctx.shadowOffsetY = 3;
+                if (n === draggedNode) {
+                    ctx.shadowColor = 'rgba(14, 165, 233, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.shadowOffsetY = 0;
+                } else {
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                    ctx.shadowBlur = 6;
+                    ctx.shadowOffsetY = 3;
+                }
                 
                 ctx.beginPath();
                 ctx.arc(n.x, n.y, n.radius, 0, Math.PI*2);
@@ -514,6 +497,9 @@
                 }
                 ctx.shadowBlur = 0; 
             });
+            
+            // Restore context back to default for the next frame
+            ctx.restore();
         }
 
         function shadeColor(color, percent) {
@@ -533,6 +519,8 @@
 
         function generate() {
             msgDiv.style.display = 'none';
+            // Reset zoom when drawing a new molecule
+            zoomLevel = 1.0; 
             try {
                 let input = document.getElementById('formulaInput').value.trim();
                 if(!input) throw new Error("Please enter a formula.");
@@ -547,7 +535,7 @@
         }
         
         window.onload = () => {
-            document.getElementById('formulaInput').value = "C6H6";
+            document.getElementById('formulaInput').value = "C8H10N4O2";
             generate();
         };
     </script>
