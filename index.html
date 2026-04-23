@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Molecular Modeler - Smart Validation</title>
+    <title>Pro Molecular Modeler - Ions & Radicals</title>
     <style>
         :root {
             --bg-dark: #020617;
@@ -84,7 +84,7 @@
         canvas { width: 100%; height: 100%; cursor: grab; }
         canvas:active { cursor: grabbing; }
 
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
         .stat-card { background: rgba(15, 23, 42, 0.5); border: 1px solid var(--border-glass); border-radius: 10px; padding: 1rem; text-align: center; }
         .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); margin-bottom: 0.25rem; }
         .stat-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -96,13 +96,13 @@
 
     <header>
         <h1>Molecule<span>Modeler</span></h1>
-        <p class="subtitle">Smart Validation & Radical Electron Support</p>
+        <p class="subtitle">Smart Validation & Polyatomic Ion Support</p>
     </header>
 
     <div class="app-container">
         <div class="glass-panel">
             <div class="controls">
-                <input type="text" id="formulaInput" placeholder="Try CN, O2, or C3H8" autocomplete="off">
+                <input type="text" id="formulaInput" placeholder="Try NH4+, SO4-2, or CO2" autocomplete="off">
                 <button onclick="generate()">Model</button>
                 <button id="cycleBtn" onclick="cycleIsomer()">Next Isomer (1/1)</button>
             </div>
@@ -126,7 +126,11 @@
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="statElectrons">0</div>
-                    <div class="stat-label">Valence Electrons</div>
+                    <div class="stat-label">Total Electrons</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statCharge">0</div>
+                    <div class="stat-label">Charge</div>
                 </div>
             </div>
         </div>
@@ -146,7 +150,6 @@
             'I':  { v: 7, maxB: 7, en: 2.66, color: '#940094', textColor: '#ffffff', radius: 26 },
             'Si': { v: 4, maxB: 4, en: 1.90, color: '#f0c8a0', textColor: '#000000', radius: 23 },
             'B':  { v: 3, maxB: 3, en: 2.04, color: '#ffb5b5', textColor: '#000000', radius: 20 }
-            // (Trimmed element list slightly here for brevity, but all physics rules apply to any added!)
         };
 
         const canvas = document.getElementById('lewisCanvas');
@@ -200,11 +203,29 @@
             msgDiv.style.display = 'block';
         }
 
-        // --- PARSING ---
-        function parseFormula(formula) {
+        // --- PARSING (NOW WITH IONS!) ---
+        function parseFormula(rawFormula) {
+            let formula = rawFormula.replace(/\s+/g, '');
+            let charge = 0;
+            
+            // Extract trailing charge (+, -, +2, -2, 2+, 2-)
+            const chargeMatch = formula.match(/([+-]\d*|\d+[+-])$/);
+            if (chargeMatch) {
+                let cStr = chargeMatch[1];
+                if (cStr === '+') charge = 1;
+                else if (cStr === '-') charge = -1;
+                else if (cStr.endsWith('+')) charge = parseInt(cStr.slice(0, -1));
+                else if (cStr.endsWith('-')) charge = -parseInt(cStr.slice(0, -1));
+                else charge = parseInt(cStr);
+                
+                // Remove charge from formula string so element parser doesn't break
+                formula = formula.replace(/([+-]\d*|\d+[+-])$/, ''); 
+            }
+
             let expanded = formula.replace(/\(([^()]+)\)(\d*)/g, (m, inner, mult) => 
                 inner.replace(/([A-Z][a-z]*)(\d*)/g, (m2, sym, num) => sym + ((num ? parseInt(num) : 1) * (mult ? parseInt(mult) : 1)))
             );
+            
             let atoms = [], match;
             const regex = /([A-Z][a-z]*)(\d*)/g;
             while ((match = regex.exec(expanded)) !== null) {
@@ -215,15 +236,18 @@
                 }
             }
             if (atoms.length < 2) throw new Error("Need at least 2 atoms.");
-            return atoms;
+            return { atoms, charge };
         }
 
         // --- THE UPGRADED BUILDER ---
-        function buildMoleculeGraph(atoms, randomize = false) {
+        function buildMoleculeGraph(atoms, charge, randomize = false) {
             if (randomize) atoms.sort(() => Math.random() - 0.5);
             else atoms.sort((a, b) => b.maxB !== a.maxB ? b.maxB - a.maxB : a.en - b.en);
 
-            let tve = atoms.reduce((sum, a) => sum + a.v, 0);
+            // Adjust Total Valence Electrons (Subtract for +, Add for -)
+            let tve = atoms.reduce((sum, a) => sum + a.v, 0) - charge;
+            if (tve < 0) throw new Error("Not enough valence electrons for this charge.");
+
             let connected = [atoms[0]], unconnected = atoms.slice(1), edges = [];
 
             while (unconnected.length > 0) {
@@ -239,7 +263,6 @@
                 tve -= 2;
             }
 
-            // Distribute remaining electrons greedily to highest electronegativity first
             let sortedByEn = [...atoms].sort((a, b) => b.en - a.en);
             sortedByEn.forEach(a => {
                 if (a.symbol === 'H') return;
@@ -249,10 +272,8 @@
                 tve -= given;
             });
             
-            // Dump any exact leftovers on the center
             if (tve > 0) { connected[0].lonePairs += tve; tve = 0; }
 
-            // GLOBAL OCTET SOLVER (Fixes the Diatomic Bug)
             let stable = false, iters = 0;
             let allNonH = atoms.filter(a => a.symbol !== 'H');
             
@@ -261,7 +282,6 @@
                 allNonH.forEach(c => {
                     let electrons = c.lonePairs + (c.bonds.reduce((s, b) => s + b.order, 0) * 2);
                     if (electrons < 8 && !['B', 'Be'].includes(c.symbol)) {
-                        // Find a neighbor with spare lone pairs to form a double/triple bond
                         let edge = c.bonds.find(b => {
                             let neighbor = b.source === c ? b.target : b.source;
                             return neighbor.lonePairs >= 2 && b.order < 3;
@@ -270,13 +290,13 @@
                             let neighbor = edge.source === c ? edge.target : edge.source;
                             edge.order++;
                             neighbor.lonePairs -= 2;
-                            stable = false; // Structure changed, re-check everyone
+                            stable = false; 
                         }
                     }
                 });
                 iters++;
             }
-            return { nodes: atoms, edges: edges };
+            return { nodes: atoms, edges: edges, charge: charge };
         }
 
         // --- THE SANITY CHECKER ---
@@ -287,16 +307,10 @@
                 let totalLocal = n.lonePairs + bondElectrons;
                 totalFound += n.lonePairs;
                 
-                // Rule 1: Hydrogen can only have 2 electrons total
                 if (n.symbol === 'H' && totalLocal > 2) return false;
-                
-                // Rule 2: Strict octet check for Period 2 elements (no exceeding 8!)
                 if (['C', 'N', 'O', 'F'].includes(n.symbol) && totalLocal > 8) return false;
             }
-            
             totalFound += graph.edges.reduce((s, b) => s + b.order * 2, 0);
-            
-            // Rule 3: Conservation of electrons
             if (totalFound !== expectedTotalElectrons) return false;
             
             return true;
@@ -306,24 +320,22 @@
             return graph.nodes.map(n => n.symbol + '[' + n.bonds.map(b => b.source===n ? b.target.symbol+b.order : b.source.symbol+b.order).sort().join('') + ']').sort().join('|');
         }
 
-        function generateMultipleGraphs(atomsTemplate) {
-            let expectedTotal = atomsTemplate.reduce((s, a) => s + a.v, 0);
+        function generateMultipleGraphs(atomsTemplate, charge) {
+            let expectedTotal = atomsTemplate.reduce((s, a) => s + a.v, 0) - charge;
             let uniqueSigs = new Set(), validGraphs = [];
             
-            // Attempt deterministic
             try {
-                let g = buildMoleculeGraph(JSON.parse(JSON.stringify(atomsTemplate)), false);
+                let g = buildMoleculeGraph(JSON.parse(JSON.stringify(atomsTemplate)), charge, false);
                 if (validateGraph(g, expectedTotal)) {
                     uniqueSigs.add(getGraphSignature(g));
                     validGraphs.push(g);
                 }
             } catch(e) {}
 
-            // Monte Carlo Randomization
             for(let i=0; i<50; i++) {
                 if(validGraphs.length >= 6) break;
                 try {
-                    let g = buildMoleculeGraph(JSON.parse(JSON.stringify(atomsTemplate)), true);
+                    let g = buildMoleculeGraph(JSON.parse(JSON.stringify(atomsTemplate)), charge, true);
                     let sig = getGraphSignature(g);
                     if(!uniqueSigs.has(sig) && validateGraph(g, expectedTotal)) {
                         uniqueSigs.add(sig);
@@ -331,7 +343,7 @@
                     }
                 } catch(e) {}
             }
-            if(validGraphs.length === 0) throw new Error("Could not compute a chemically valid structure.");
+            if(validGraphs.length === 0) throw new Error("Could not compute a chemically valid structure. Check your atoms and charge.");
             return validGraphs;
         }
 
@@ -382,6 +394,20 @@
 
         function drawGraph(graph) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Charge in the top corner if it exists
+            if (graph.charge !== 0) {
+                ctx.save();
+                ctx.font = "bold 26px 'Inter', sans-serif";
+                ctx.fillStyle = "#0ea5e9";
+                ctx.textAlign = "right";
+                let chargeText = graph.charge > 0 ? "+" + graph.charge : graph.charge;
+                if (graph.charge === 1) chargeText = "+";
+                if (graph.charge === -1) chargeText = "-";
+                ctx.fillText(`Charge: [ ${chargeText} ]`, canvas.width - 25, 45);
+                ctx.restore();
+            }
+
             ctx.save();
             ctx.translate(canvas.width/2, canvas.height/2);
             ctx.scale(zoomLevel, zoomLevel);
@@ -419,7 +445,6 @@
 
                 ctx.shadowBlur = 0; ctx.fillStyle = n.textColor; ctx.fillText(n.symbol, n.x, n.y + 1);
 
-                // DRAWING ELECTRONS (WITH RADICAL SUPPORT)
                 ctx.fillStyle = "#ef4444"; ctx.shadowColor = '#ef4444'; ctx.shadowBlur = 4;
                 let pairs = Math.floor(n.lonePairs / 2);
                 let hasRadical = (n.lonePairs % 2) !== 0;
@@ -433,7 +458,7 @@
                 }
                 
                 if (hasRadical) {
-                    let a = angles[pairs % 4]; // Put radical in the next available slot
+                    let a = angles[pairs % 4];
                     ctx.beginPath(); ctx.arc(n.x + Math.cos(a)*lpRad, n.y + Math.sin(a)*lpRad, 2.5, 0, Math.PI*2); ctx.fill();
                 }
                 ctx.shadowBlur = 0; 
@@ -460,8 +485,11 @@
             msgDiv.style.display = 'none'; zoomLevel = 1.0; 
             try {
                 let input = document.getElementById('formulaInput').value.trim();
-                let baseAtoms = parseFormula(input);
-                isomers = generateMultipleGraphs(baseAtoms);
+                let parsed = parseFormula(input);
+                let baseAtoms = parsed.atoms;
+                let charge = parsed.charge;
+                
+                isomers = generateMultipleGraphs(baseAtoms, charge);
                 currentIsomerIndex = 0;
                 
                 cycleBtn.style.display = isomers.length > 1 ? 'block' : 'none';
@@ -469,8 +497,12 @@
                 
                 currentGraph = isomers[currentIsomerIndex];
                 document.getElementById('statFormula').textContent = input;
-                document.getElementById('statAtoms').textContent = baseAtoms.length;
-                document.getElementById('statElectrons').textContent = baseAtoms.reduce((s, a) => s + a.v, 0);
+                document.getElementById('statAtoms').textContent =NHF- baseAtoms.length;
+                document.getElementById('statElectrons').textContent = baseAtoms.reduce((s, a) => s + a.v, 0) - charge;
+                
+                let chargeDisplay = charge === 0 ? "0" : (charge > 0 ? "+" + charge : charge);
+                document.getElementById('statCharge').textContent = chargeDisplay;
+                
                 renderMolecule(currentGraph);
             } catch(e) { showMessage(e.message, true); }
         }
