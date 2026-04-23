@@ -497,7 +497,7 @@
                 
                 currentGraph = isomers[currentIsomerIndex];
                 document.getElementById('statFormula').textContent = input;
-                document.getElementById('statAtoms').textContent =NHF- baseAtoms.length;
+                document.getElementById('statAtoms').textContent = baseAtoms.length;
                 document.getElementById('statElectrons').textContent = baseAtoms.reduce((s, a) => s + a.v, 0) - charge;
                 
                 let chargeDisplay = charge === 0 ? "0" : (charge > 0 ? "+" + charge : charge);
